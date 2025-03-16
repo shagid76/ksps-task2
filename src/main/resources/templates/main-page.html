@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meter Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f9f9f9;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        input, button {
+            margin: 5px;
+            padding: 8px;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .delete-btn {
+            background-color: red;
+        }
+
+        .delete-btn:hover {
+            background-color: darkred;
+        }
+    </style>
+</head>
+<body>
+<h1>Meter Dashboard</h1>
+<input type="text" id="meterName" placeholder="New Meter Name">
+<button onclick="addMeter()">Add Meter</button>
+<table>
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Day</th>
+        <th>Night</th>
+        <th>Bill ($)</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody id="meterTable"></tbody>
+</table>
+
+<script>
+    const properties = {
+        tariffDay: parseFloat('${tariff.day}') || 10,
+        tariffNight: parseFloat('${tariff.night}') || 5,
+        additionalDay: parseFloat('${tariff.additional.day}') || 50,
+        additionalNight: parseFloat('${tariff.additional.night}') || 25
+    };
+
+    let meters = JSON.parse(localStorage.getItem('meters')) || [];
+
+    function saveMeters() {
+        localStorage.setItem('meters', JSON.stringify(meters));
+    }
+
+    function renderMeters() {
+        const table = document.getElementById("meterTable");
+        table.innerHTML = "";
+        meters.forEach((meter, index) => {
+            let dayPrev = meter.data.length > 0 ? meter.data[meter.data.length - 1].dayValue : meter.currentDay;
+            let nightPrev = meter.data.length > 0 ? meter.data[meter.data.length - 1].nightValue : meter.currentNight;
+
+            if (meter.data.length > 0) {
+                dayPrev = meter.data[meter.data.length - 1].dayValue;
+                nightPrev = meter.data[meter.data.length - 1].nightValue;
+            }
+
+            const bill = (dayPrev * properties.tariffDay) + (nightPrev * properties.tariffNight);
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+            <td>${meter.name}</td>
+            <td>${dayPrev.toFixed(2)}</td>
+            <td>${nightPrev.toFixed(2)}</td>
+            <td>$${bill.toFixed(2)}</td>
+            <td>
+                <input type="number" id="day-${index}" placeholder="Day Value">
+                <input type="number" id="night-${index}" placeholder="Night Value">
+                <button onclick="updateValue(${index})">Update</button>
+                <button onclick="addToValue(${index})">Add</button>
+                <button onclick="deleteMeter(${index})" class="delete-btn">Delete</button>
+            </td>
+        `;
+            table.appendChild(row);
+        });
+    }
+
+    function addMeter() {
+        const name = document.getElementById("meterName").value.trim();
+        if (!name) {
+            alert("Please enter a meter name.");
+            return;
+        }
+        meters.push({
+            name: name,
+            currentDay: 0,
+            currentNight: 0,
+            data: []
+        });
+        saveMeters();
+        renderMeters();
+    }
+
+    function updateValue(index) {
+        const dayValue = parseFloat(document.getElementById(`day-${index}`).value);
+        const nightValue = parseFloat(document.getElementById(`night-${index}`).value);
+
+        if (isNaN(dayValue) || isNaN(nightValue)) {
+            alert("Please enter valid numbers for day and night values.");
+            return;
+        }
+
+        const meter = meters[index];
+        meter.data.push({dayValue, nightValue});
+        meter.currentDay = dayValue;
+        meter.currentNight = nightValue;
+
+        saveMeters();
+        renderMeters();
+    }
+
+    function addToValue(index) {
+        const dayValue = parseFloat(document.getElementById(`day-${index}`).value);
+        const nightValue = parseFloat(document.getElementById(`night-${index}`).value);
+
+        if (isNaN(dayValue) || isNaN(nightValue)) {
+            alert("Please enter valid numbers for day and night values.");
+            return;
+        }
+
+        const meter = meters[index];
+        const newDayValue = meter.currentDay + dayValue;
+        const newNightValue = meter.currentNight + nightValue;
+
+        meter.data.push({dayValue: newDayValue, nightValue: newNightValue});
+        meter.currentDay = newDayValue;
+        meter.currentNight = newNightValue;
+
+        saveMeters();
+        renderMeters();
+    }
+
+    function deleteMeter(index) {
+        meters.splice(index, 1);
+        saveMeters();
+        renderMeters();
+    }
+
+    document.addEventListener("DOMContentLoaded", renderMeters);
+</script>
+</body>
+</html>
